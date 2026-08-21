@@ -7,6 +7,7 @@ import {
 import { IJavaVariable } from "./JavaVariable";
 import { IRenaming } from "./Renaming";
 import { IRootStatement, RootStatement } from "./statements/root-statement";
+import { ILatticeLevel } from "./confidentiality/confidentiality";
 
 /**
  * The representation of the data in the graphical editor in a json object.
@@ -30,6 +31,7 @@ export interface ILocalCBCFormula {
   globalConditions: ICondition[];
   renamings: IRenaming[] | null;
   isProven: boolean;
+  isConfidential: boolean;
   readonly local: true;
 }
 
@@ -47,6 +49,7 @@ export class LocalCBCFormula implements ILocalCBCFormula {
     public globalConditions: ICondition[] = [],
     public renamings: IRenaming[] | null = null,
     public isProven: boolean = false,
+    public isConfidential: boolean = false,
     public position: IPosition = new Position(0, 0),
   ) {}
 }

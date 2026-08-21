@@ -49,11 +49,9 @@ export class CompositionStatementComponent
 {
   @Input() public icon = "pi pi-circle";
   @Input() _node!: CompositionStatementNode;
-
   public constructor(treeService: TreeService) {
     super(treeService);
   }
-
   ngOnInit(): void {
   }
 

@@ -15,6 +15,10 @@ import { WebSocketService } from "./websocket";
 import { ApiDiagramFile } from "../../project/types/api-elements";
 import { AbstractStatementNode } from "../../../types/statements/nodes/abstract-statement-node";
 import { TreeService } from "../tree.service";
+import { ConfidentialityService } from "../confidentiality/network-confidentiality-job.service";
+import { IFBCVerificationResult, IFBCFormula } from "../../../types/IFBCFormula";
+import { RootStatement } from "../../../types/statements/root-statement";
+import { toVariableConfidentialityIDMapping } from "../../../types/confidentiality/variableConfidentialityState";
 
 /**
  * The Service to send the editor contents over the network to the backend for verification or code generation.
@@ -28,12 +32,17 @@ export class NetworkJobService {
   private static readonly verifyPath = "/editor/verify";
   private static readonly verifyWebSocketPath = "/ws/verify/";
   private static readonly verifyResultPath = "/editor/jobs/";
+  private static readonly checkConfidentialityPath = "/ifbc/editor/verify";
+  private static readonly checkConfidentialityWebSocketPath = "/ifbc/ws/verify/";
+  private static readonly checkConfidentialityResultPath = "/ifbc/editor/jobs/";
+
   private static readonly generatePath = "/editor/javaGen";
 
   constructor(
     private readonly http: HttpClient,
     private readonly mapper: CbcFormulaMapperService,
     private readonly verificationService: VerificationService,
+    private readonly confidentialityService: ConfidentialityService,
     private readonly consoleService: ConsoleService,
     private readonly projectService: ProjectService,
     private readonly treeService: TreeService,
@@ -186,6 +195,111 @@ export class NetworkJobService {
         });
       });
   }
+
+    /**
+   * Check the confidentiality of a single statement and its subtree via the backend
+   * @param formula The temporary formula containing the statement to verify
+   * @param statementNode The statement node being verified
+   * @param projectId The id of the project
+   * @param urn urn of the file being verified
+   * @param onComplete Callback to execute when verification completes (success or error)
+   */
+  public checkConfidentialityStatement(
+    formula: IFBCFormula,
+    statementNode: AbstractStatementNode,
+    projectId: string | undefined,
+    checkConfidentiality: boolean,
+    checkIntegrity: boolean,
+    urn: string,
+    onComplete: () => void,
+  ) {
+    let params = new HttpParams();
+
+    if (projectId) {
+      params = params.set("projectId", projectId);
+    }
+
+    this.http
+      .post<string>(
+        environment.apiUrl + NetworkJobService.checkConfidentialityPath,
+        {
+          "name": formula.name,
+          "javaVariables": formula.javaVariables,
+          "renamings": formula.renamings,
+          "level": formula.level.id,
+          "preVariableState": toVariableConfidentialityIDMapping(formula.preVariables),
+          "postVariableState": toVariableConfidentialityIDMapping(formula.postVariables),
+          "postCondition": formula.postCondition,
+          "preCondition": formula.preCondition,
+          "statement": (formula.statement as RootStatement).statement,
+          "respectsConfidentiality": false,
+          checkConfidentiality,
+          checkIntegrity,
+        }
+        ,
+        // formula
+        //   ? new ApiDiagramFile("", this.mapper.exportFormula(formula), "file")
+        //       .content
+        //   : undefined,
+        {
+          params: params,
+        },
+      )
+      .pipe(
+        catchError((error: HttpErrorResponse): Observable<string> => {
+          // Handle 500 and other errors
+          console.log(error);
+          if (error.status === 500 || error.status >= 400) {
+            // Mark statement as unverified
+            statementNode.statement.isProven = false;
+            this.treeService.refreshNodes();
+            this.consoleService.addErrorResponse(
+              error,
+              `Confidentiality check failed for statement "${statementNode.statement.name}": ${error.error._embedded.errors[0].message}`,
+            );
+            onComplete();
+            return of();
+          }
+          this.consoleService.addErrorResponse(
+            error,
+            `Confidentiality check failed for statement "${statementNode.statement.name}": ${error.error._embedded.errors[0].message}`,
+          );
+          onComplete();
+          return of();
+        }),
+      )
+      .subscribe((uuid: string) => {
+        if (!uuid) {
+          // Empty UUID means error was handled in catchError
+          return;
+        }
+        const ws = new WebSocketService(
+          environment.apiUrl + NetworkJobService.checkConfidentialityWebSocketPath + uuid,
+        );
+        ws.messages$.subscribe((msg: string) => {
+          if (msg.includes("ifbc check complete")) {
+            ws.disconnect();
+            this.http
+              .get<IFBCVerificationResult>(
+                environment.apiUrl + NetworkJobService.checkConfidentialityResultPath + uuid,
+              )
+              .pipe(map((formula) => ({ formula: this.mapper.importFormula(formula), response: formula })))
+              .subscribe(({formula, response}) => {
+                console.log(formula)
+                this.confidentialityService.nextStatement(
+                  formula,
+                  response.context,
+                  statementNode,
+                  urn,
+                );
+                onComplete();
+              });
+          }
+          this.confidentialityService.verifyInfo(msg);
+        });
+      });
+  }
+
 
   /**
    * Use the backend to generate code based on the refinements

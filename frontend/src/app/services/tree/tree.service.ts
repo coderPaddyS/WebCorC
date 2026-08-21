@@ -33,6 +33,7 @@ export class TreeService {
   private readonly _resetVerifyNotifier: Subject<void>;
   private readonly _verificationResultNotifier: Subject<AbstractStatement>;
   private readonly _finalizeNotifier: Subject<void>;
+  private readonly _variableNotifier: Subject<void>;
   private _globalConditions: string[] = [];
   private _renames: Renaming[] = [];
   private _statementNodes: WritableSignal<AbstractStatementNode[]> = signal([]);
@@ -45,6 +46,7 @@ export class TreeService {
     this._exportNotifier = new Subject<void>();
     this._resetVerifyNotifier = new Subject<void>();
     this._finalizeNotifier = new Subject<void>();
+    this._variableNotifier = new Subject<void>();
   }
 
   setFormula(newFormula: LocalCBCFormula, urn: string) {
@@ -89,6 +91,10 @@ export class TreeService {
       variablesArray.push(javaVariable.toString()),
     );
     return variablesArray;
+  }
+
+  public get variableUpdateNotifier(): Subject<void> {
+    return this._variableNotifier
   }
 
   public get exportNotifier(): Subject<void> {
@@ -152,6 +158,7 @@ export class TreeService {
 
     if (!isDuplicate) {
       this._variables.push(newVariable);
+      this.variableUpdateNotifier.next();
     }
 
     return this._variables.length != sizeBeforeAdd;
@@ -168,10 +175,13 @@ export class TreeService {
     this._variables = this._variables.filter(
       (val) => !variablesToBeRemoved.includes(val.name),
     );
+    this.variableUpdateNotifier.next();
+
   }
 
   public removeAllVariables(): void {
     this._variables = [];
+    this.variableUpdateNotifier.next();
   }
 
   public addGlobalCondition(name: string): boolean {

@@ -1,0 +1,98 @@
+import { Condition, ICondition } from "./condition/condition";
+import { IPosition, Position } from "./position";
+import {
+  IAbstractStatement,
+  IAbstractStatementImpl,
+} from "./statements/abstract-statement";
+import { IJavaVariable } from "./JavaVariable";
+import { IRenaming } from "./Renaming";
+import { IRootStatement, RootStatement } from "./statements/root-statement";
+import { VariableIFbCState } from "./confidentiality/variableConfidentialityState";
+import { CBCFormula, ICBCFormula } from "./CBCFormula";
+import { ConfidentialityLattice, LatticeLevel, ILatticeLevel } from "./confidentiality/confidentiality";
+
+/**
+ * The representation of the data in the graphical editor in a json object.
+ * Used for communication with the backend.
+ */
+export interface IIFBCFormula extends ICBCFormula {
+  preVariables: VariableIFbCState;
+  postVariables: VariableIFbCState;
+  isConfidential: boolean;
+}
+
+/**
+ * The representation of the data in the graphical editor in a json object.
+ * Used for saving state.
+ */
+export class IFBCFormula implements IIFBCFormula {
+  constructor(
+    public name: string = "",
+    public statement: IAbstractStatement | undefined = new RootStatement(
+      "",
+      new Condition(""),
+      new Condition(""),
+      undefined,
+    ),
+    public preCondition: ICondition = new Condition(""),
+    public postCondition: ICondition = new Condition(""),
+    public preVariables: VariableIFbCState = { confidentiality: {}, integrity: {} },
+    public postVariables: VariableIFbCState = { confidentiality: {}, integrity: {} },
+    public level: ILatticeLevel,
+    public javaVariables: IJavaVariable[] = [],
+    public globalConditions: ICondition[] = [],
+    public renamings: IRenaming[] | null = null,
+    public isConfidential: boolean = false,
+    public isProven: boolean = false,
+    public position: IPosition = new Position(0, 0),
+  ) {}
+
+  static fromCBCFormula(formula: CBCFormula, lattice: ConfidentialityLattice) {
+    return new IFBCFormula(
+      formula.name,
+      formula.statement,
+      formula.preCondition,
+      formula.postCondition,
+      { confidentiality: {}, integrity: {} },
+      { confidentiality: {}, integrity: {} },
+      lattice.minimalLevel,
+      formula.javaVariables,
+      formula.globalConditions,
+      formula.renamings,
+      false,
+      formula.isProven,
+      formula.position,
+    )
+  }
+}
+
+export interface IFBCVerificationResult extends IIFBCFormula {
+  context: {
+    confidentiality?: {
+      successfull: boolean;
+      data: {
+        [id: string]: {
+          postVariableState: {
+            levels: {
+              [variable: string]: ILatticeLevel;
+            }
+          }
+          contextLevel: ILatticeLevel;
+        }
+      }
+    }
+    integrity?: {
+      successfull: boolean;
+      data: {
+        [id: string]: {
+          postVariableState: {
+            levels: {
+              [variable: string]: ILatticeLevel;
+            }
+          }
+          contextLevel: ILatticeLevel;
+        }
+      }
+    }
+  }
+}
