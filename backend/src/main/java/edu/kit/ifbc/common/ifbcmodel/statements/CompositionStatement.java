@@ -4,12 +4,18 @@ import java.util.logging.Logger;
 
 import edu.kit.cbc.common.corc.cbcmodel.Condition;
 import edu.kit.ifbc.common.dto.VariableStateDTO;
+import edu.kit.ifbc.common.ifbcmodel.Lattice.Level;
+import edu.kit.ifbc.common.ifbcmodel.LatticeResultContext;
+import edu.kit.ifbc.common.ifbcmodel.Lattice;
 import edu.kit.ifbc.common.ifbcmodel.VariableState;
 import edu.kit.ifbc.common.ifbcmodel.confidentiality.ConfidentialityLattice;
-import edu.kit.ifbc.common.ifbcmodel.confidentiality.ConfidentialityLevel;
+import edu.kit.ifbc.common.ifbcmodel.integrity.IntegrityLattice;
+import edu.kit.ifbc.common.ifbcmodel.parsing.parser.VariableParsingException;
+import io.micronaut.serde.annotation.Serdeable;
 import edu.kit.cbc.common.corc.proof.ProofContext;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -18,25 +24,27 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Serdeable
 public class CompositionStatement extends AbstractIFbCStatement {
 
     private AbstractIFbCStatement firstStatement;
     private AbstractIFbCStatement secondStatement;
-    @Getter(AccessLevel.NONE)
-    private VariableStateDTO intermediateVariableState;
-
-    public VariableState getIntermediateVariableState(ConfidentialityLattice lattice) {
-        return VariableState.fromIDs(intermediateVariableState.confidentiality(), lattice);
-    }
 
     @Override
-    public VariableState calculatePostConfidentialityState(
-        ConfidentialityLattice lattice, 
-        ConfidentialityLevel level,
-        VariableState preVariableState
-    ) {
+    public VariableState calculatePostVariableState(
+        Lattice lattice, 
+        Lattice.Level level,
+        VariableState preVariableState,
+        LatticeResultContext context
+    ) throws VariableParsingException {
         Logger.getGlobal().info("Condition: \t" + this.getPreCondition().getParsedCondition());
-        VariableState postVariableStateS1 = firstStatement.calculatePostConfidentialityState(lattice, level, preVariableState);
-        return secondStatement.calculatePostConfidentialityState(lattice, level, postVariableStateS1);
+        context.handleChild(firstStatement.getId());
+        VariableState postVariableStateS1 = firstStatement.calculatePostVariableState(lattice, level, preVariableState, context);
+        context.finishChild();
+        context.handleChild(secondStatement.getId());
+        VariableState postVariableState = secondStatement.calculatePostVariableState(lattice, level, postVariableStateS1, context);
+        context.finishChild();
+        context.setInfo(postVariableState, level);
+        return postVariableState;
     }
 }

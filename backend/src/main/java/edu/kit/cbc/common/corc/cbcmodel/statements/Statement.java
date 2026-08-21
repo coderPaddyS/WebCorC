@@ -1,5 +1,9 @@
 package edu.kit.cbc.common.corc.cbcmodel.statements;
 
+import java.util.Collections;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import edu.kit.cbc.common.corc.parsing.TokenSource;
 import edu.kit.cbc.common.corc.parsing.lexer.Lexer;
@@ -7,6 +11,7 @@ import edu.kit.cbc.common.corc.parsing.parser.ast.Tree;
 import edu.kit.cbc.common.corc.parsing.program.ProgramLexer;
 import edu.kit.cbc.common.corc.parsing.program.ProgramParser;
 import edu.kit.cbc.common.corc.parsing.program.ProgramPrinter;
+import edu.kit.cbc.common.corc.parsing.program.ast.BlockTree;
 import edu.kit.cbc.common.corc.proof.KeYProof;
 import edu.kit.cbc.common.corc.proof.KeYProofGenerator;
 import edu.kit.cbc.common.corc.proof.ProofContext;

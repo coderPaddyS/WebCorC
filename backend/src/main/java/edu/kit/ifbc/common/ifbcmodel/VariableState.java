@@ -2,54 +2,47 @@ package edu.kit.ifbc.common.ifbcmodel;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import edu.kit.ifbc.common.ifbcmodel.confidentiality.ConfidentialityLattice;
-import edu.kit.ifbc.common.ifbcmodel.confidentiality.ConfidentialityLevel;
-import io.micronaut.http.annotation.RequestAttribute;
-import io.micronaut.http.context.ServerRequestContext;
 import io.micronaut.serde.annotation.Serdeable;
 import lombok.Data;
 
 @Data
 @Serdeable
 public class VariableState {
-    private HashMap<String, ConfidentialityLevel> confidentiality;
+    private HashMap<String, Lattice.Level> levels;
 
-    public VariableState(HashMap<String, ConfidentialityLevel> confidentiality) {
-        this.confidentiality = confidentiality;
+    public VariableState(HashMap<String, Lattice.Level> level) {
+        this.levels = level;
     }
 
     public VariableState(VariableState other) {
-        HashMap<String, ConfidentialityLevel> map = new HashMap<>();
-        for (var entry : other.confidentiality.entrySet()) {
+        HashMap<String, Lattice.Level> map = new HashMap<>();
+        for (var entry : other.levels.entrySet()) {
             map.put(entry.getKey(), entry.getValue().clone());
         }
-        this.confidentiality = map;
+        this.levels = map;
     }
 
     public VariableState without(String variable) {
         VariableState copy = new VariableState(this);
-        copy.confidentiality.remove(variable);
-        Logger.getGlobal().info("Variable without " + (variable == null ? "null" : variable));
-        for (var entry : copy.confidentiality.entrySet()) {
-            Logger.getGlobal().info(entry.getKey() + ": " + (entry == null ? "null" : entry.getValue().name()));;
-
-        }
+        copy.levels.remove(variable);
         return copy;
     }
 
-    public VariableState with(String variable, ConfidentialityLevel level) {
+    public VariableState with(String variable, Lattice.Level level) {
         VariableState copy = new VariableState(this);
-        copy.confidentiality.put(variable, level);
+        copy.levels.put(variable, level);
         return copy;
     }
 
-    public ConfidentialityLevel confidentialityOf(String variable, ConfidentialityLevel def) {
-        ConfidentialityLevel level = this.confidentiality.get(variable);
+    public Lattice.Level levelOf(String variable, Lattice.Level def) {
+        Lattice.Level level = this.levels.get(variable);
         if (level == null) {
             return def;
         } else {
@@ -57,40 +50,43 @@ public class VariableState {
         }
     }
 
-    public ConfidentialityLevel[] confidentialityOf(ConfidentialityLevel def, String... variables) {
-        ConfidentialityLevel[] levels = new ConfidentialityLevel[variables.length];
+    public Lattice.Level[] levelOf(Lattice.Level def, String... variables) {
+        Lattice.Level[] levels = new Lattice.Level[variables.length];
         
         for (int i = 0; i < variables.length; i++) {
-            levels[i] = this.confidentialityOf(variables[i], def);
+            levels[i] = this.levelOf(variables[i], def);
         }
         
         return levels;
     }
 
-    public VariableState withEachLub(ConfidentialityLattice lattice, VariableState other) {
-        HashMap<String, ConfidentialityLevel> newMap = new HashMap<>();
-        for (String variable : this.confidentiality.keySet()) {
-            ConfidentialityLevel otherLevel = other.confidentialityOf(variable, this.confidentiality.get(variable));
-            newMap.put(variable, lattice.leastUpperBound(this.confidentiality.get(variable), otherLevel));
+    public VariableState withEachLub(Lattice lattice, VariableState other) {
+        HashMap<String, Lattice.Level> newMap = new HashMap<>();
+        for (String variable : this.levels.keySet()) {
+            Lattice.Level otherLevel = other.levelOf(variable, this.levels.get(variable));
+            newMap.put(variable, lattice.leastUpperBound(this.levels.get(variable), otherLevel));
         }
-        for (String variable : other.confidentiality.keySet()) {
-            if (this.confidentiality.containsKey(variable)) {
+        for (String variable : other.levels.keySet()) {
+            if (this.levels.containsKey(variable)) {
                 continue;
             }
-            newMap.put(variable, other.confidentiality.get(variable));
+            newMap.put(variable, other.levels.get(variable));
         }
         return new VariableState(newMap);
+    }
+
+    public Set<String> getVariableSet() {
+        return this.levels.keySet();
     }
 
     @JsonCreator
     public static VariableState fromIDs(
         @JsonProperty("confidentiality") Map<String, Integer> ids,
-        ConfidentialityLattice lattice
+        Lattice lattice
     ) {
-        Logger.getGlobal().info(lattice.confidentialityById(0).name());
-        HashMap<String, ConfidentialityLevel> levels = new HashMap<>();
+        HashMap<String, Lattice.Level> levels = new HashMap<>();
         for (var entry : ids.entrySet()) {
-            levels.put(entry.getKey(), lattice.confidentialityById(entry.getValue()));
+            levels.put(entry.getKey(), lattice.levelById(entry.getValue()));
         }
         return new VariableState(levels);
     }

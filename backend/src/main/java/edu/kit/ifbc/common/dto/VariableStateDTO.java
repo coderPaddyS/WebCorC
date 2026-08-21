@@ -6,5 +6,6 @@ import io.micronaut.serde.annotation.Serdeable;
 
 @Serdeable
 public record VariableStateDTO(
-    HashMap<String, Integer> confidentiality
+    HashMap<String, Integer> confidentiality,
+    HashMap<String, Integer> integrity
 ) {}

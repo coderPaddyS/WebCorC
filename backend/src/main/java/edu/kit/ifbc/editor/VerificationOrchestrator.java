@@ -37,6 +37,7 @@ public class VerificationOrchestrator {
         if (!jobs.get(jobId).isHasResult()) {
             return null;
         }
+        Logger.getGlobal().info(jobs.toString());
         return jobs.get(jobId).getFormula();
     }
 

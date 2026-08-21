@@ -8,7 +8,12 @@ import edu.kit.cbc.common.corc.parsing.program.ProgramLexer;
 import edu.kit.cbc.common.corc.parsing.program.ProgramParser;
 import edu.kit.cbc.common.corc.proof.ProofContext;
 import edu.kit.cbc.projects.files.controller.FilesController;
+import edu.kit.ifbc.common.ifbcmodel.LatticeResultContext;
+import edu.kit.ifbc.common.ifbcmodel.IFbCContext;
 import edu.kit.ifbc.common.ifbcmodel.IFbCFormula;
+import io.micronaut.serde.jackson.JacksonJsonMapper;
+import jakarta.inject.Inject;
+import jakarta.inject.Singleton;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,8 +29,14 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+
 import lombok.Getter;
 
+@Singleton
 public class VerificationJob extends Thread {
 
     private static final String LOGGER_FORMAT = "%s %s\n";
@@ -53,17 +64,33 @@ public class VerificationJob extends Thread {
     }
 
     public void run() {
-        log("confidentiality check started");
-        boolean proven = formula.proveConfidentiality();
-        formula.setRespectsConfidentiality(proven);
-
+        log("ifbc check started");
+        IFbCContext context = formula.prove();
         hasResult = true;
-        log("confidentiality check complete");
-        if (proven) {
-            log("all statements were successfully for confidentiality!");
-        } else {
-            log("WebCorC was unable to check for confidentiality. See the log for further information...");
+
+        LatticeResultContext confidentialityResult = context.getConfidentiality();
+        LatticeResultContext integrityResult = context.getIntegrity();
+        
+        if (confidentialityResult != null) {
+            if (confidentialityResult.isSuccessfull()) {
+                formula.setConfidential(true);
+                log("all statements were successfully for confidentiality!");
+            } else {
+                formula.setConfidential(false);
+                log("WebCorC was unable to check for confidentiality. See the log for further information...");
+            }
         }
+
+        if (integrityResult != null) {
+            if (integrityResult.isSuccessfull()) {
+                formula.setIntegral(true);
+                log("all statements were successfully for integrity!");
+            } else {
+                formula.setIntegral(false);
+                log("WebCorC was unable to check for integrity. See the log for further information...");
+            }
+        }
+        log("ifbc check complete");
 
         //Keep job output and result available for some time before it is deleted
         try {
