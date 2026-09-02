@@ -54,11 +54,18 @@ public class LatticeResultContext {
         }
     }
 
+    public void setPostStateCompatiblity(Lattice lattice, VariableState state) {
+        this.data.forEach((key, entry) -> {
+            entry.compatibleWithFinalPostState = entry.postVariableState.isCompatibleWith(lattice, state);
+        });
+    }
+
     @Data
     @Serdeable
     public class IFbCStatementInfo {
         List<IFbCStatementInfo> children = new LinkedList<>();
         VariableState postVariableState = null;
         Lattice.Level contextLevel = null;
+        Boolean compatibleWithFinalPostState = null;
     }
 }

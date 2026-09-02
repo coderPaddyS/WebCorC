@@ -77,7 +77,7 @@
           <p-button
             text
             icon="pi pi-info-circle"
-            [severity]="statementInfoVisible ? 'primary' : undefined"
+            [severity]="isCompatibleWithFinalPostState ? (statementInfoVisible ? 'primary' : undefined) : 'danger'"
             class="cursor-pointer"
             [attr.aria-pressed]="statementInfoVisible"
             aria-label="Toggle information"

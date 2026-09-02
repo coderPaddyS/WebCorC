@@ -136,14 +136,16 @@ export class ConfidentialityService {
           node.statement.isConfidential = context.confidentiality?.successfull || false;
           node.statementInfo.confidentiality = {
             context: context.confidentiality!.data[node.statement.id].contextLevel,
-            postVariableState: context.confidentiality!.data[node.statement.id].postVariableState?.levels ?? {}
+            postVariableState: context.confidentiality!.data[node.statement.id].postVariableState?.levels ?? {},
+            compatibleWithPostState: context.confidentiality!.data[node.statement.id].compatibleWithFinalPostState,
           }
         }
         if ("integrity" in context && node.statement.id in context.integrity!.data) {
           node.statement.isIntegral = context.integrity?.successfull || false;
           node.statementInfo.integrity = {
             context: context.integrity!.data[node.statement.id].contextLevel,
-            postVariableState: context.integrity!.data[node.statement.id].postVariableState?.levels ?? {}
+            postVariableState: context.integrity!.data[node.statement.id].postVariableState?.levels ?? {},
+            compatibleWithPostState: context.integrity!.data[node.statement.id].compatibleWithFinalPostState,
           }
         }
       }

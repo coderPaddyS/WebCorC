@@ -79,6 +79,20 @@ public class VariableState {
         return this.levels.keySet();
     }
 
+    public boolean isCompatibleWith(Lattice lattice, VariableState other) {
+        if (!this.levels.keySet().equals(other.levels.keySet())) {
+            return false;
+        }
+
+        for (String level : this.levels.keySet()) {
+            Lattice.Level lub = lattice.leastUpperBound(this.levels.get(level), other.levels.get(level));
+            if (!lub.equals(other.levels.get(level))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @JsonCreator
     public static VariableState fromIDs(
         @JsonProperty("confidentiality") Map<String, Integer> ids,

@@ -194,6 +194,11 @@ export class StatementComponent {
     return this.latticeService.isCheckingConfidentiality()
   }
 
+  public get isCompatibleWithFinalPostState(): boolean {
+    return (this._node.statementInfo.confidentiality?.compatibleWithPostState ?? true) 
+      && (this._node.statementInfo.integrity?.compatibleWithPostState ?? true) 
+  }
+
   public verifyConfidentiality(
         checkConfidentiality: boolean,
         checkIntegrity: boolean,

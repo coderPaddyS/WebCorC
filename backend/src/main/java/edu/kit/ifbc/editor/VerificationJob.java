@@ -9,8 +9,12 @@ import edu.kit.cbc.common.corc.parsing.program.ProgramParser;
 import edu.kit.cbc.common.corc.proof.ProofContext;
 import edu.kit.cbc.projects.files.controller.FilesController;
 import edu.kit.ifbc.common.ifbcmodel.LatticeResultContext;
+import edu.kit.ifbc.common.ifbcmodel.VariableState;
+import edu.kit.ifbc.common.ifbcmodel.confidentiality.ConfidentialityLattice;
+import edu.kit.ifbc.common.ifbcmodel.integrity.IntegrityLattice;
 import edu.kit.ifbc.common.ifbcmodel.IFbCContext;
 import edu.kit.ifbc.common.ifbcmodel.IFbCFormula;
+import edu.kit.ifbc.common.ifbcmodel.Lattice;
 import io.micronaut.serde.jackson.JacksonJsonMapper;
 import jakarta.inject.Inject;
 import jakarta.inject.Singleton;
@@ -70,7 +74,24 @@ public class VerificationJob extends Thread {
 
         LatticeResultContext confidentialityResult = context.getConfidentiality();
         LatticeResultContext integrityResult = context.getIntegrity();
-        
+
+        if (formula.isCheckConfidentiality()) {
+            ConfidentialityLattice confidentialityLattice = formula.getConfidentialityLattice();
+
+            confidentialityResult.setPostStateCompatiblity(
+                confidentialityLattice, 
+                VariableState.fromIDs(formula.getPostVariableState().confidentiality(), confidentialityLattice)
+            );
+        }
+
+        if (formula.isCheckIntegrity()) {
+            IntegrityLattice integrityLattice = formula.getIntegrityLattice();
+            integrityResult.setPostStateCompatiblity(
+                integrityLattice, 
+                VariableState.fromIDs(formula.getPostVariableState().integrity(), integrityLattice)
+            );
+        }
+
         if (confidentialityResult != null) {
             if (confidentialityResult.isSuccessfull()) {
                 formula.setConfidential(true);
