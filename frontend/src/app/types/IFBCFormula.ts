@@ -8,8 +8,8 @@ import { IJavaVariable } from "./JavaVariable";
 import { IRenaming } from "./Renaming";
 import { IRootStatement, RootStatement } from "./statements/root-statement";
 import { VariableIFbCState } from "./confidentiality/variableConfidentialityState";
-import { CBCFormula, ICBCFormula } from "./CBCFormula";
-import { ConfidentialityLattice, LatticeLevel, ILatticeLevel } from "./confidentiality/confidentiality";
+import { CBCFormula, ICBCFormula, LocalCBCFormula } from "./CBCFormula";
+import { ConfidentialityLattice, LatticeLevel, ILatticeLevel, defaultConfidentialityLattice, IntegrityLattice, defaultIntegrityLattice } from "./confidentiality/confidentiality";
 
 /**
  * The representation of the data in the graphical editor in a json object.
@@ -18,6 +18,14 @@ import { ConfidentialityLattice, LatticeLevel, ILatticeLevel } from "./confident
 export interface IIFBCFormula extends ICBCFormula {
   preVariables: VariableIFbCState;
   postVariables: VariableIFbCState;
+  isConfidential: boolean;
+}
+
+export interface ILocalIFBCFormula extends LocalCBCFormula {
+  preVariables: VariableIFbCState;
+  postVariables: VariableIFbCState;
+  integrityLattice: IntegrityLattice;
+  confidentialityLattice: ConfidentialityLattice;
   isConfidential: boolean;
 }
 
@@ -66,6 +74,29 @@ export class IFBCFormula implements IIFBCFormula {
   }
 }
 
+export class LocalIFBCFormula implements ILocalIFBCFormula {
+  public readonly local = true;
+  constructor(
+    public name: string = "",
+    public statement: IRootStatement | undefined = new RootStatement(
+      "",
+      new Condition(""),
+      new Condition(""),
+      undefined,
+    ),
+    public javaVariables: IJavaVariable[] = [],
+    public preVariables: VariableIFbCState = { confidentiality: {}, integrity: {}},
+    public postVariables: VariableIFbCState = { confidentiality: {}, integrity: {}},
+    public confidentialityLattice: ConfidentialityLattice = defaultConfidentialityLattice,
+    public integrityLattice: IntegrityLattice = defaultIntegrityLattice,
+    public globalConditions: ICondition[] = [],
+    public renamings: IRenaming[] | null = null,
+    public isProven: boolean = false,
+    public isConfidential: boolean = false,
+    public position: IPosition = new Position(0, 0),
+  ) {}
+}
+
 export interface IFBCVerificationResult extends IIFBCFormula {
   context: {
     confidentiality?: {
@@ -78,6 +109,7 @@ export interface IFBCVerificationResult extends IIFBCFormula {
             }
           }
           contextLevel: ILatticeLevel;
+          compatibleWithFinalPostState: boolean;
         }
       }
     }
@@ -91,6 +123,7 @@ export interface IFBCVerificationResult extends IIFBCFormula {
             }
           }
           contextLevel: ILatticeLevel;
+          compatibleWithFinalPostState: boolean;
         }
       }
     }

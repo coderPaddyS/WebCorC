@@ -1,6 +1,7 @@
 import { CBCFormula, LocalCBCFormula } from "../../../types/CBCFormula";
 import { RootStatement } from "../../../types/statements/root-statement";
 import { IPosition } from "../../../types/position";
+import { LocalIFBCFormula } from "../../../types/IFBCFormula";
 
 /**
  * Enum of inode type
@@ -266,6 +267,15 @@ export class LocalDiagramFile extends LocalFile {
     formattedContent.javaVariables = content.javaVariables;
     formattedContent.renamings = content.renamings;
     formattedContent.isProven = content.isProven;
+    if ((content as LocalIFBCFormula).preVariables !== undefined) {
+      // The formula is a ifbc-formula, load the state accordingly.
+      const _content = content as LocalIFBCFormula;
+      const _formattedContent = formattedContent as LocalIFBCFormula;
+      _formattedContent.confidentialityLattice = _content.confidentialityLattice;
+      _formattedContent.integrityLattice = _content.integrityLattice;
+      _formattedContent.preVariables = _content.preVariables;
+      _formattedContent.postVariables = _content.postVariables;
+    }
     this.content = formattedContent;
   }
 

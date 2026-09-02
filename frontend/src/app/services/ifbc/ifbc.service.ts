@@ -77,6 +77,8 @@ export class IFbCService {
 
     private confidentialityLatticeLoaded = false;
     private integrityLatticeLoaded = false;
+    private skipNextConfidentialityUpdate = false;
+    private skipNextIntegrityUpdate = false;
 
     private withDefaultLatticeLevel(state: { [variable: string]: ILatticeLevel | undefined } | undefined, variables: string[], lattice: ILattice | undefined): { [variable: string]: ILatticeLevel } {
         const entries = state ? Object.entries(state) : variables.map(v => [v, undefined])
@@ -110,10 +112,27 @@ export class IFbCService {
         )
     }
 
+    public initData(
+        confidentialityLattice: ConfidentialityLattice,
+        integrityLattice: IntegrityLattice,
+        preVariableState: VariableIFbCState,
+        postVariableState: VariableIFbCState
+    ) {
+        this.confidentialityLatticeLoaded = (confidentialityLattice !== undefined)
+        this.integrityLatticeLoaded = (integrityLattice !== undefined)
+        this.confidentialityLattice$.next(confidentialityLattice);
+        this.integrityLattice$.next(integrityLattice);
+        this.preVariableState$.next(preVariableState);
+        this.postVariableState$.next(postVariableState);
+        this.skipNextConfidentialityUpdate = true;
+        this.skipNextIntegrityUpdate = true;
+    }
+
     public get confidentialityLattice(): Observable<ConfidentialityLattice> {
         if (!this.confidentialityLatticeLoaded) {
             this.confidentialityLatticeLoaded = true;
             const params = this.projectService.projectId ? { projectId: this.projectService.projectId } : undefined
+            console.log("newFUpdate", "this is trying to fetch remotely", new Error());
             this.http.get<LatticeGetResponse>(environment.apiUrl + "/ifbc/editor/lattice/confidentiality", { params })
                 .pipe(map(resp => {
                     const lattice = this.correctApiConfidentialityLattice(resp.lattice);
@@ -124,6 +143,10 @@ export class IFbCService {
                     }
                 }))
                 .subscribe(({lattice, preVariableState, postVariableState}) => {
+                    if (this.skipNextConfidentialityUpdate) {
+                        this.skipNextConfidentialityUpdate = false;
+                        return;
+                    }
                     console.log("trying to update variable confidentiality", preVariableState, postVariableState)
                     this.confidentialityLattice$.next(lattice)
                     this.preVariableState$.next({
@@ -161,6 +184,10 @@ export class IFbCService {
                     }
                 }))
                 .subscribe(({lattice, preVariableState, postVariableState}) => {
+                    if (this.skipNextIntegrityUpdate) {
+                        this.skipNextIntegrityUpdate = false;
+                        return;
+                    }
                     this.integrityLattice$.next(lattice)
                     this.preVariableState$.next({
                         integrity: this.adjustVariables(preVariableState, this.variables, lattice),
@@ -201,10 +228,6 @@ export class IFbCService {
             .subscribe(lattice => {
                 this.confidentialityLattice$.next(lattice);
             });
-    }
-
-    public saveIntegrityLattice(levels: ILatticeLevel[]) {
-        return this.http.post<IntegrityLattice>(environment.apiUrl + "/ifbc/editor/lattice/integrity", {levels})
     }
 
     public registerRootStatement(statement: RootStatementComponent) {

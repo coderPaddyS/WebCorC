@@ -1,4 +1,4 @@
-import { Injectable, signal, Signal, WritableSignal } from "@angular/core";
+import { Injectable, Injector, signal, Signal, WritableSignal } from "@angular/core";
 import { Subject } from "rxjs";
 import {
   AbstractStatement,
@@ -20,6 +20,8 @@ import {
 } from "../../types/statements/root-statement";
 import { RootStatementNode } from "../../types/statements/nodes/root-statement-node";
 import { RepetitionStatementNode } from "../../types/statements/nodes/repetition-statement-node";
+import { IFbCService } from "../ifbc/ifbc.service";
+import { LocalIFBCFormula } from "../../types/IFBCFormula";
 
 /**
  * Service for the context of the tree in the graphical editor.
@@ -40,7 +42,9 @@ export class TreeService {
   private rootStatementNode: RootStatementNode | undefined;
   private _urn = "";
 
-  public constructor() {
+  public constructor(
+    private injector: Injector,
+  ) {
     this._verificationResultNotifier = new Subject<AbstractStatement>();
     this._verifyNotifier = new Subject<void>();
     this._exportNotifier = new Subject<void>();
@@ -66,6 +70,19 @@ export class TreeService {
     newFormula.globalConditions.forEach((condition) => {
       this.addGlobalCondition(condition.condition);
     });
+
+    if ((newFormula as LocalIFBCFormula).preVariables !== undefined) {
+      const _formula = newFormula as LocalIFBCFormula;
+      // The formula is a ifbc-formula, load the state accordingly.
+      const ifbcService = this.injector.get(IFbCService);
+
+      ifbcService.initData(
+        _formula.confidentialityLattice,
+        _formula.integrityLattice,
+        _formula.preVariables,
+        _formula.postVariables
+      );
+    }
 
     try {
       this.generateStatementNodes();

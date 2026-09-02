@@ -102,6 +102,7 @@ export class LandingPageComponent {
 
     dialogRef?.onClose.subscribe((selectedExample) => {
       if (selectedExample) {
+        console.log("newFProject", selectedExample)
         this.projectService.importProject(
           selectedExample.project,
           selectedExample.name,
